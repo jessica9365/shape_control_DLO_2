@@ -5,7 +5,7 @@ project_dir: '/mnt/c/Users/91990/Documents/GitHub/FYP_Object_Detection_Model/sha
 # for environment
 env/sim_or_real: 'sim'
 env/dimension: '3D'  # '2D' or '3D'
-
+git add .
 ros_rate/env_rate: 10
 ros_rate/online_update_rate: 50
 
