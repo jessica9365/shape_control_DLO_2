@@ -8,3 +8,9 @@ ws_dlo/*
 **/__pycache__
 
 
+ws_dlo/src/dlo_manipulation_pkg/models/rbfWeights/2D/10\*0.2/model_J.pth
+ws_dlo/src/dlo_manipulation_pkg/models/rbfWeights/2D/10\*1/model_J.pth
+ws_dlo/src/dlo_manipulation_pkg/models/rbfWeights/2D/10\*6/model_J.pth
+ws_dlo/src/dlo_manipulation_pkg/models/rbfWeights/3D/10\*0.2/model_J.pth
+ws_dlo/src/dlo_manipulation_pkg/models/rbfWeights/3D/10\*1/model_J.pth
+ws_dlo/src/dlo_manipulation_pkg/models/rbfWeights/3D/10\*6/model_J.pth
