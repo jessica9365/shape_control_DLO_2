@@ -1,6 +1,7 @@
-# for the whole system
-project_dir: '/mnt/c/Users/91990/Documents/GitHub/FYP_Object_Detection_Model/shape_control_DLO_2/''
-# project_dir: /home/mingrui/Mingrui/Research/DLO/project_journal_21/shape_control_DLO_2/
+# for the whole project
+
+project_dir: '/home/jessica/shape_control_DLO_2/'
+
 
 # for environment
 env/sim_or_real: 'sim'

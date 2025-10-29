@@ -4,6 +4,8 @@
 # bridge between the Unity Simulator and the controller scripts, based on 'mlagents' and 'gym'
 
 import numpy as np
+if not hasattr(np, 'bool'):
+    np.bool = bool
 from matplotlib import pyplot as plt
 import time
 import sys
