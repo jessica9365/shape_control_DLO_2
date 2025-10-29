@@ -83,8 +83,8 @@ class Net_J(nn.Module):
         sigma = np.sqrt(variance) * np.sqrt(2) * 10 #  mannually set initial value which is better for the following training
         invSigma = np.clip(invSigma, 0, 1)
 
-        self.fc1.centres.data = torch.tensor(kmeans.cluster_centers_).cuda()
-        self.fc1.sigmas.data = torch.tensor(invSigma).cuda()
+        self.fc1.centres.data = torch.tensor(kmeans.cluster_centers_).to(self.device)
+        self.fc1.sigmas.data = torch.tensor(invSigma).to(self.device)
 
 
 
@@ -104,10 +104,10 @@ class JacobianPredictor(object):
     
     # ------------------------------------------------------
     def __init__(self, num_hidden_unit=256):
-        device = torch.device("cuda:0")
+        self.device = torch.device("cpu")
         
         self.bTrainMuBeta = True
-        self.model_J = Net_J(self.numFPs, self.bTrainMuBeta, num_hidden_unit).to(device)
+        self.model_J = Net_J(self.numFPs, self.bTrainMuBeta, num_hidden_unit).to(self.device)
         # for offline learning
         learningRate = 0.01
         self.optimizer = torch.optim.Adam([{'params': self.model_J.parameters()}], learningRate)
@@ -206,10 +206,10 @@ class JacobianPredictor(object):
                 fps_vel /= (torch.linalg.norm(fps_vel, dim=1).unsqueeze(1) + 1e-8) # avoid division by zero
 
                 # data to GPU
-                length = length.cuda()
-                state_input = state_input.cuda()
-                fps_vel = fps_vel.cuda()
-                ends_vel = ends_vel.cuda()
+                length = length.to(self.device)
+                state_input = state_input.to(self.device)
+                fps_vel = fps_vel.to(self.device)
+                ends_vel = ends_vel.to(self.device)
                 
                 bmm_ends_vel = torch.reshape(ends_vel, (-1, 1, 12))
                 bmm_fps_vel = torch.reshape(fps_vel, (-1, 1, self.numFPs * 3))
@@ -243,10 +243,10 @@ class JacobianPredictor(object):
         for batch_idx, (length, state_input, fps_vel, ends_vel) in enumerate(self.testDataLoader):
             state_input = self.relativeStateRepresentationTorch(state_input)
 
-            length = length.cuda()
-            state_input = state_input.cuda()
-            fps_vel = fps_vel.cuda()
-            ends_vel = ends_vel.cuda()
+            length = length.to(self.device)
+            state_input = state_input.to(self.device)
+            fps_vel = fps_vel.to(self.device)
+            ends_vel = ends_vel.to(self.device)
             
             bmm_ends_vel = torch.reshape(ends_vel, (-1, 1, 12))
             bmm_fps_vel = torch.reshape(fps_vel, (-1, 1, self.numFPs * 3))
@@ -289,8 +289,8 @@ class JacobianPredictor(object):
         fps_vel_norm = np.linalg.norm(state[I.fps_vel_idx])
         if fps_vel_norm > params_online_max_valid_fps_vel or  fps_vel_norm < params_online_min_valid_fps_vel:
             # return the Jacobian without online updating
-            length_torch = torch.tensor(length).cuda()
-            state_input_torch = self.relativeStateRepresentationTorch(torch.tensor(state_input)).cuda()
+            length_torch = torch.tensor(length).to(self.device)
+            state_input_torch = self.relativeStateRepresentationTorch(torch.tensor(state_input)).to(self.device)
             J_pred = self.model_J(state_input_torch)
             J_pred[:, :, [3, 4, 5, 9, 10, 11]] *= length_torch.reshape(-1, 1, 1)  # no normalize 要改 # RBF_abs 要改
             return J_pred.cpu().detach().numpy().reshape(3 * self.numFPs, 12)
@@ -322,11 +322,11 @@ class JacobianPredictor(object):
 
         # data preparation
         # latest step data
-        length_torch = torch.tensor(length).cuda()
-        state_input_torch = self.relativeStateRepresentationTorch(torch.tensor(state_input)).cuda()
-        ends_vel_torch = torch.reshape(torch.tensor(ends_vel), (1, 1, 12)).cuda()
-        fps_vel_torch = torch.reshape(torch.tensor(fps_vel), (1, 1, 3 * self.numFPs)).cuda()
-        task_error_torch = torch.reshape(torch.tensor(task_error), (1, 1, 3 * self.numFPs)).cuda()
+        length_torch = torch.tensor(length).to(self.device)
+        state_input_torch = self.relativeStateRepresentationTorch(torch.tensor(state_input)).to(self.device)
+        ends_vel_torch = torch.reshape(torch.tensor(ends_vel), (1, 1, 12)).to(self.device)
+        fps_vel_torch = torch.reshape(torch.tensor(fps_vel), (1, 1, 3 * self.numFPs)).to(self.device)
+        task_error_torch = torch.reshape(torch.tensor(task_error), (1, 1, 3 * self.numFPs)).to(self.device)
 
         # previous data in sliding window
         if len(self.online_dataset) > 1:
@@ -337,10 +337,10 @@ class JacobianPredictor(object):
                 state_input_batch = state_input_batch.reshape(1, -1)
             fps_vel_batch = online_dataset[:, I.fps_vel_idx]
             ends_vel_batch = online_dataset[:, I.ends_vel_idx]
-            length_batch_torch = torch.tensor(length_batch).cuda()
-            state_input_batch_torch = self.relativeStateRepresentationTorch(torch.tensor(state_input_batch)).cuda()
-            ends_vel_batch_torch = torch.reshape(torch.tensor(ends_vel_batch), (-1, 1, 12)).cuda()
-            fps_vel_batch_torch = torch.reshape(torch.tensor(fps_vel_batch), (-1, 1, 3 * self.numFPs)).cuda()
+            length_batch_torch = torch.tensor(length_batch).to(self.device)
+            state_input_batch_torch = self.relativeStateRepresentationTorch(torch.tensor(state_input_batch)).to(self.device)
+            ends_vel_batch_torch = torch.reshape(torch.tensor(ends_vel_batch), (-1, 1, 12)).to(self.device)
+            fps_vel_batch_torch = torch.reshape(torch.tensor(fps_vel_batch), (-1, 1, 3 * self.numFPs)).to(self.device)
 
         # updating
         if (params_update_if_window_full is False) or (len(self.online_dataset) == window_size - 1):
@@ -355,7 +355,7 @@ class JacobianPredictor(object):
                 J_pred_T = J_pred.transpose(1, 2)
                 task_e = task_error_torch
                 approx_e = fps_vel_torch - torch.bmm(ends_vel_torch, J_pred_T)
-                loss = self.mse_criterion(weight_approx_e * approx_e  + weight_task_e * task_e,   torch.zeros(approx_e.shape).cuda())
+                loss = self.mse_criterion(weight_approx_e * approx_e  + weight_task_e * task_e,   torch.zeros(approx_e.shape).to(self.device))
 
                 loss.backward()
                 
@@ -431,9 +431,9 @@ class JacobianPredictor(object):
     def predFPsVelocities(self, length, fps_pos, ends_pose, ends_vel):
         state_input = np.concatenate([fps_pos, ends_pose], axis=1).astype('float32') # one row matrix
         # np array to torch tensor
-        state_input_torch = self.relativeStateRepresentationTorch(torch.tensor(state_input)).cuda()
-        ends_vel_torch = torch.reshape(torch.tensor(ends_vel.astype('float32')), (-1, 1, 12)).cuda()
-        length_torch = torch.tensor(length.astype('float32')).cuda()
+        state_input_torch = self.relativeStateRepresentationTorch(torch.tensor(state_input)).to(self.device)
+        ends_vel_torch = torch.reshape(torch.tensor(ends_vel.astype('float32')), (-1, 1, 12)).to(self.device)
+        length_torch = torch.tensor(length.astype('float32')).to(self.device)
 
         # predict the feature velocities
         J_pred = self.model_J(state_input_torch)

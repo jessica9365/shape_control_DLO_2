@@ -1,10 +1,12 @@
-# for the whole project
+# for the whole system
+<
 project_dir: '/home/jessica/shape_control_DLO_2/'
-
+>>>>>>> Initial Commit
 
 # for environment
 env/sim_or_real: 'sim'
 env/dimension: '3D'  # '2D' or '3D'
+git add .
 ros_rate/env_rate: 10
 ros_rate/online_update_rate: 50
 
