@@ -4,7 +4,7 @@ project_dir: '/home/jessica/shape_control_DLO_2/'
 
 # for environment
 env/sim_or_real: 'sim'
-env/dimension: '3D'  # '2D' or '3D'
+env/dimension: '2D'  # '2D' or '3D'
 ros_rate/env_rate: 10
 ros_rate/online_update_rate: 50
 
@@ -24,7 +24,7 @@ controller/enable_left_arm: true
 controller/enable_right_arm: true 
 
 controller/control_law: 'ours'
-controller/offline_model: '10*6'  # '10*0.2' or '10*1' or '10*6'
+controller/offline_model: '10*0.2'  # '10*0.2' or '10*1' or '10*6'
 
 controller/online_learning/learning_rate: 1.0
 controller/online_learning/weight_ratio: 10 # learning rate of prediction error / learning rate of task error
