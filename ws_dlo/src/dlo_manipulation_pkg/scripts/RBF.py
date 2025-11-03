@@ -46,6 +46,7 @@ class NNDataset(Dataset):
 class Net_J(nn.Module):
     def __init__(self, nFPs, bTrainMuBeta, num_hidden_unit):
         super(Net_J, self).__init__()
+        self.device = torch.device("cpu")
         self.nFPs = nFPs
         self.numHidden = num_hidden_unit
         lw = [3*self.nFPs + 3+4+4, self.numHidden, (nFPs * 3) * 12]
@@ -81,6 +82,7 @@ class Net_J(nn.Module):
             nSamples[label] += 1
         variance = variance / nSamples
         sigma = np.sqrt(variance) * np.sqrt(2) * 10 #  mannually set initial value which is better for the following training
+        invSigma = 1.0 / (sigma + 1e-8)  # Adding epsilon to avoid division by zero
         invSigma = np.clip(invSigma, 0, 1)
 
         self.fc1.centres.data = torch.tensor(kmeans.cluster_centers_).to(self.device)
@@ -91,10 +93,10 @@ class Net_J(nn.Module):
 # ----------------------------------------------------------------------------------------------------------
 # ----------------------------------------------------------------------------------------------------------
 class JacobianPredictor(object):
-
     numFPs = rospy.get_param("DLO/num_FPs")
     projectDir = rospy.get_param("project_dir")
     online_learning_rate = rospy.get_param("controller/online_learning/learning_rate")
+    # offline_model = rospy.get_param("controller/offline_model")
     lr_task_e = online_learning_rate
     lr_approx_e = online_learning_rate * rospy.get_param("controller/online_learning/weight_ratio")
     env = rospy.get_param("env/sim_or_real")
@@ -105,6 +107,9 @@ class JacobianPredictor(object):
     # ------------------------------------------------------
     def __init__(self, num_hidden_unit=256):
         self.device = torch.device("cpu")
+
+        # offline_model = rospy.get_param("controller/offline_model") 
+        self.offline_model = rospy.get_param("controller/offline_model")
         
         self.bTrainMuBeta = True
         self.model_J = Net_J(self.numFPs, self.bTrainMuBeta, num_hidden_unit).to(self.device)
@@ -117,10 +122,11 @@ class JacobianPredictor(object):
         self.online_optimizer = torch.optim.SGD([{'params': self.model_J.fc2.parameters()}], lr=1.0/self.online_update_rate)
         self.mse_criterion = torch.nn.MSELoss(reduction='sum')
 
+
         if rospy.get_param("learning/is_test"):
             self.nnWeightDir = self.projectDir + 'ws_dlo/src/dlo_manipulation_pkg/models_test/rbfWeights/' + self.env_dim + '/'
         else:
-            self.nnWeightDir = self.projectDir + 'ws_dlo/src/dlo_manipulation_pkg/models/rbfWeights/' + self.env_dim + '/'
+            self.nnWeightDir = self.projectDir + 'ws_dlo/src/dlo_manipulation_pkg/models/rbfWeights/' + self.env_dim + '/'+ self.offline_model+ '/'
         self.resultsDir = self.projectDir + 'results/' + self.env + '/'
         self.dataDir = self.projectDir +'data/'
 
@@ -145,35 +151,62 @@ class JacobianPredictor(object):
 
 
     # ------------------------------------------------------
+    # def LoadModelWeights(self, file=None):
+    #     if file is not None:
+    #         if os.path.exists(self.nnWeightDir  + "/" + file):
+    #             self.model_J.load_state_dict(torch.load(self.nnWeightDir  + "/" + file))
+    #             # print('Load previous model.')
+    #         else:
+    #             print('Warning: no model exists !')
+    #     else:
+    #         offline_model = rospy.get_param("controller/offline_model")
+    #         if rospy.get_param("learning/is_test"):
+    #             if os.path.exists(self.nnWeightDir  + "/model_J.pth"):
+    #                 self.model_J.load_state_dict(torch.load(self.nnWeightDir + "/model_J.pth"))
+    #                 # print('Load previous model.')
+    #             else:
+    #                 print('Warning: no model exists !')
+    #         else:
+    #             if os.path.exists(self.nnWeightDir + offline_model + "/model_J.pth"):
+    #                 self.model_J.load_state_dict(torch.load(self.nnWeightDir + offline_model + "/model_J.pth"))
+    #                 # print('Load previous model.')
+    #             else:
+    #                 print('Warning: no model exists !')
+
+    #         self.n_count = 0
+    #         self.online_dataset = []
+
     def LoadModelWeights(self, file=None):
         if file is not None:
-            if os.path.exists(self.nnWeightDir  + "/" + file):
-                self.model_J.load_state_dict(torch.load(self.nnWeightDir  + "/" + file))
-                # print('Load previous model.')
+            weight_path = os.path.join(self.nnWeightDir, file)
+            print(f"[LoadModelWeights] file is not None - Trying: {weight_path}")
+            if os.path.exists(weight_path):
+                print(f"[LoadModelWeights] Found and loading: {weight_path}")
+                self.model_J.load_state_dict(torch.load(weight_path))
             else:
-                print('Warning: no model exists !')
+                print(f"[LoadModelWeights] Warning: no model exists at: {weight_path}")
         else:
-            offline_model = rospy.get_param("controller/offline_model")
-            if rospy.get_param("learning/is_test"):
-                if os.path.exists(self.nnWeightDir  + "/model_J.pth"):
-                    self.model_J.load_state_dict(torch.load(self.nnWeightDir + "/model_J.pth"))
-                    # print('Load previous model.')
-                else:
-                    print('Warning: no model exists !')
+            # Check whether in test mode
+            is_test = rospy.get_param("learning/is_test")
+            model_path = os.path.join(self.nnWeightDir, "model_J.pth")
+            print(f"[LoadModelWeights] file is None - in test mode: {is_test}")
+            print(f"[LoadModelWeights] Trying: {model_path}")
+            if os.path.exists(model_path):
+                print(f"[LoadModelWeights] Found and loading: {model_path}")
+                self.model_J.load_state_dict(torch.load(model_path))
             else:
-                if os.path.exists(self.nnWeightDir + offline_model + "/model_J.pth"):
-                    self.model_J.load_state_dict(torch.load(self.nnWeightDir + offline_model + "/model_J.pth"))
-                    # print('Load previous model.')
-                else:
-                    print('Warning: no model exists !')
+                print(f"[LoadModelWeights] Warning: no model exists at: {model_path}")
 
-            self.n_count = 0
-            self.online_dataset = []
+        self.n_count = 0
+        self.online_dataset = []
 
     
     # ------------------------------------------------------
     def SaveModelWeights(self):
-        torch.save(self.model_J.state_dict(), self.nnWeightDir + "model_J.pth")
+        # torch.save(self.model_J.state_dict(), self.nnWeightDir + "model_J.pth")
+        save_path = os.path.join(self.nnWeightDir, "model_J.pth")
+        print(f"Saving model weights to: {save_path}")
+        torch.save(self.model_J.state_dict(), save_path)
         # print("Save models to ", self.nnWeightDir)
 
     
