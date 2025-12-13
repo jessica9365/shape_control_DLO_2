@@ -11,8 +11,11 @@ except:
     from state_index import I
 
 
-env_dim = rospy.get_param("env/dimension")
-num_fps = rospy.get_param("DLO/num_FPs")
+# env_dim = rospy.get_param("env/dimension")
+# num_fps = rospy.get_param("DLO/num_FPs")
+
+env_dim = '2D'
+num_fps = 10
 
 
 # --------------------------------------------------------------------------------
@@ -250,7 +253,7 @@ def statesTransform(state, rotvec, translation):
 # -------------------------------------------------------------------------------------------------------------------------------------
 if __name__ == '__main__':
 
-    from my_plot import plot3dState
+    # from my_plot import plot3dState
 
     project_dir = rospy.get_param("project_dir")
     env_dim = rospy.get_param("env/dimension")
@@ -260,7 +263,7 @@ if __name__ == '__main__':
 
     states_aug = datasetRandomTransform(states_world)
 
-    plot3dState(states_aug[100, :])
+    # plot3dState(states_aug[100, :])
 
 
     plt.show()

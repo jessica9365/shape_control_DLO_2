@@ -1,6 +1,7 @@
 import rospy
 
-num_fps = rospy.get_param("DLO/num_FPs")
+# num_fps = rospy.get_param("DLO/num_FPs")
+num_fps = 10
 
 
 class Index(object):
