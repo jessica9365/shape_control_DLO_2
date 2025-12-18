@@ -25,8 +25,8 @@ controller/enable_end_rotation: true
 controller/enable_left_arm: true
 controller/enable_right_arm: true 
 
-controller/control_law: 'ours'
-controller/offline_model: '10*6'  # '10*0.2' or '10*1' or '10*6'
+controller/control_law: 'ours_v1'
+controller/offline_model: 'gnn_v1'  # '10*0.2' or '10*1' or '10*6'
 
 controller/online_learning/learning_rate: 1.0
 controller/online_learning/weight_ratio: 10 # learning rate of prediction error / learning rate of task error

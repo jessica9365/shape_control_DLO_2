@@ -382,14 +382,14 @@ class JacobianPredictor(object):
             offline_model = args.controller_offline_model
             # if rospy.get_param("learning/is_test"):
             if args.learning_is_test:
-                if os.path.exists(self.nnWeightDir + "/model_J_GNN.pth"):
-                    self.model_J.load_state_dict(torch.load(self.nnWeightDir + "/model_J_GNN.pth"))
+                if os.path.exists(self.nnWeightDir + "/model_J.pth"):
+                    self.model_J.load_state_dict(torch.load(self.nnWeightDir + "/model_J.pth"))
                     # print('Load previous model.')
                 else:
                     print('Warning: no model exists !')
             else:
-                if os.path.exists(self.nnWeightDir + offline_model + "/model_J_GNN.pth"):
-                    self.model_J.load_state_dict(torch.load(self.nnWeightDir + offline_model + "/model_J_GNN.pth"))
+                if os.path.exists(self.nnWeightDir + offline_model + "/model_J.pth"):
+                    self.model_J.load_state_dict(torch.load(self.nnWeightDir + offline_model + "/model_J.pth"))
                     # print('Load previous model.')
                 else:
                     print('Warning: no model exists !')

@@ -13,10 +13,15 @@ import rospy
 from utils.state_index import I
 
 
-project_dir = rospy.get_param("project_dir")
-num_fps = rospy.get_param("DLO/num_FPs")
-env = rospy.get_param("env/sim_or_real")
-target_points_idx = rospy.get_param("controller/object_fps_idx")
+# project_dir = rospy.get_param("project_dir")
+# num_fps = rospy.get_param("DLO/num_FPs")
+# env = rospy.get_param("env/sim_or_real")
+# target_points_idx = rospy.get_param("controller/object_fps_idx")
+
+project_dir= "/home/jessica/shape_control_DLO_2/"
+num_fps= 10
+env = 'sim'
+target_points_idx = [1, 2, 3, 4, 5, 6, 7, 8]
 
 
 # ------------------------------------------------------------------------------
@@ -82,5 +87,5 @@ def evaluateControlResults(names, num_case=100, delta_t=0.1):
 # -------------------------------------------------------------------------------------------------------------------------------------------------
 if __name__ == '__main__':
 
-    methods = ['ours']
+    methods = ['ours_v8']
     evaluateControlResults(methods)

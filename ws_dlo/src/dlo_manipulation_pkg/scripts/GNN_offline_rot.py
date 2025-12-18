@@ -12,7 +12,7 @@ from scipy.spatial.transform import Rotation as sciR
 
 import torch_rbf as rbf  # reference: https://github.com/JeremyLinux/PyTorch-Radial-Basis-Function-Layer
 
-from utils.data_augmentation import dataRandomTransform
+from utils.data_augmentation import dataRandomTransformWithLength
 from utils.state_index import I
 
 import json
@@ -27,48 +27,6 @@ import argparse
 
 parser = argparse.ArgumentParser(description="DLO Parser")
 
-
-# write args into JSON
-# # Whole system
-# parser.add_argument('--project_dir', type=str, default='/home/xinge/DLO/shape_control_DLO_2/', help='Directory of the project')
-#
-# # Environment
-# parser.add_argument('--env-sim_or_real', type=str, default='sim', choices=['sim', 'real'], help='Simulation or real')
-# parser.add_argument('--env-dimension', type=str, default='2D', choices=['2D', '3D'], help='Dimensionality of the environment')
-# # ROS rates
-# parser.add_argument('--ros_rate-env_rate', type=int, default=10, help='Environment update rate in Hz')
-# parser.add_argument('--ros_rate-online_update_rate', type=int, default=50, help='Online update rate in Hz')
-# # DLO
-# parser.add_argument('--DLO-num_FPs', type=int, default=10, help='Number of feature points in DLO')
-# # Offline learning
-# parser.add_argument('--learning-is_test', action='store_false', help='Flag to indicate if it is a test scenario')
-# # Controller settings
-# parser.add_argument('--controller-object_fps_idx', nargs='+', type=int, default=[1, 2, 3, 4, 5, 6, 7, 8], help='Indices of target feature points')
-#
-# parser.add_argument('--controller-enable_end_rotation', type=bool, default=True, help='Enable end rotation in the controller')
-# parser.add_argument('--controller-enable_left_arm', type=bool, default=True, help='Enable left arm in the controller')
-# parser.add_argument('--controller-enable_right_arm', type=bool, default=True, help='Enable right arm in the controller')
-# parser.add_argument('--controller-control_law', type=str, default='ours', help='Control law to use')
-# parser.add_argument('--controller-offline_model', type=str, default='10*6_backup', choices=['10*0.2', '10*1', '10*6_backup'], help='Offline model configuration')
-#
-# # Online learning in the controller
-# parser.add_argument('--controller-online_learning-learning_rate', type=float, default=1.0,
-#                     help='Learning rate for online learning')
-# parser.add_argument('--controller-online_learning-weight_ratio', type=int, default=10,
-#                     help='Weight ratio of prediction error to task error learning rates')
-#
-#
-# args = parser.parse_args()
-#
-
-# def write_args_to_file(args, filepath='config.json'):
-#     args_dict = vars(args)
-#     with open(filepath, 'w') as file:
-#         json.dump(args_dict, file, indent=4)
-#
-# write_args_to_file(args)
-
-# load args
 
 def load_args_from_file(
         filepath=r"/home/jessica/shape_control_DLO_2/ws_dlo/src/dlo_system_pkg/config/config.json"
@@ -119,7 +77,235 @@ class NNDataset(Dataset):
         return self.data_num
 
 
-def get_graph_data(state_input, length, numFPs):
+def mask_feature_points_batch(state_input_tensor, p_mask=0.25, numFPs=10):
+    """
+    Randomly hide a contiguous block of feature points in some samples.
+
+    Inputs:
+        state_input_tensor: (B, 3*numFPs + 14) torch.Tensor
+        p_mask: probability a given sample is masked
+        numFPs: number of feature points (e.g. 10)
+
+    Returns:
+        state_input_masked: same shape, with some FP positions zeroed.
+    """
+    B = state_input_tensor.shape[0]
+    state_out = state_input_tensor.clone()
+
+    # indices of the FP position part in the flattened state_input
+    # fps_pos is stored first: 0 : 3*numFPs
+    for i in range(B):
+        if np.random.rand() < p_mask:
+            # choose k_hidden in {1,2,3,4}
+            k_hidden = np.random.randint(1, 5)  # upper bound exclusive → [1,4]
+            # choose start index so that block fits inside [0, numFPs-1]
+            start = np.random.randint(0, numFPs - k_hidden + 1)
+            end = start + k_hidden  # not inclusive
+
+            # zero positions of those FPs (3 coords per FP)
+            for fp_idx in range(start, end):
+                s = 3 * fp_idx
+                e = 3 * (fp_idx + 1)
+                state_out[i, s:e] = 0.0   # xyz of FP fp_idx
+
+    return state_out
+
+def mask_feature_points_batch_2(state_input_tensor, p_mask=0.25, numFPs=10):
+    """
+    Randomly hide a contiguous block of feature points in some samples.
+
+    Returns:
+        state_input_masked: (B, 3*numFPs+14)
+        fp_visible_mask:    (B, numFPs)  1=visible, 0=hidden
+    """
+    B = state_input_tensor.shape[0]
+    state_out = state_input_tensor.clone()
+    fp_visible_mask = torch.ones(B, numFPs, dtype=torch.float32)
+
+    for i in range(B):
+        if np.random.rand() < p_mask:
+            k_hidden = np.random.randint(1, 5)
+            start = np.random.randint(0, numFPs - k_hidden + 1)
+            end = start + k_hidden
+
+            for fp_idx in range(start, end):
+                s = 3 * fp_idx
+                e = 3 * (fp_idx + 1)
+                state_out[i, s:e] = 0.0
+                fp_visible_mask[i, fp_idx] = 0.0
+
+    return state_out, fp_visible_mask
+
+def mask_feature_points_batch_noncontig(state_input_tensor, p_mask=0.25, numFPs=10):
+    """
+    Randomly hide a non-contiguous set of feature points in some samples.
+
+    Inputs:
+        state_input_tensor: (B, 3*numFPs + 14) torch.Tensor
+        p_mask: probability a given sample is masked
+        numFPs: number of feature points (e.g. 10)
+
+    Returns:
+        state_input_masked: same shape, with some FP positions zeroed.
+    """
+    B = state_input_tensor.shape[0]
+    state_out = state_input_tensor.clone()
+
+    for i in range(B):
+        if np.random.rand() < p_mask:
+            # choose k_hidden in {1,2,3,4}
+            k_hidden = np.random.randint(1, 5)  # 1,2,3,4
+
+            # randomly choose k_hidden distinct FP indices (non-contiguous allowed)
+            hidden_indices = np.random.choice(numFPs, size=k_hidden, replace=False)
+
+            # zero positions of those FPs (3 coords per FP)
+            for fp_idx in hidden_indices:
+                s = 3 * fp_idx
+                e = 3 * (fp_idx + 1)
+                state_out[i, s:e] = 0.0   # xyz of FP fp_idx
+
+    return state_out
+
+def mask_feature_points_batch_noncontig_2(state_input_tensor, p_mask=0.25, numFPs=10):
+    """
+    Randomly hide a non-contiguous set of feature points.
+    """
+    B = state_input_tensor.shape[0]
+    state_out = state_input_tensor.clone()
+    fp_visible_mask = torch.ones(B, numFPs, dtype=torch.float32)
+
+    for i in range(B):
+        if np.random.rand() < p_mask:
+            k_hidden = np.random.randint(1, 5)
+            hidden_indices = np.random.choice(numFPs, size=k_hidden, replace=False)
+
+            for fp_idx in hidden_indices:
+                s = 3 * fp_idx
+                e = 3 * (fp_idx + 1)
+                state_out[i, s:e] = 0.0
+                fp_visible_mask[i, fp_idx] = 0.0
+
+    return state_out, fp_visible_mask
+
+def mask_feature_points_batch_combined(state_input_tensor, p_mask=0.25, numFPs=10):
+    """
+    Combined masking: randomly chooses contiguous OR non-contiguous FP hiding.
+    
+    Inputs:
+        state_input_tensor: (B, 3*numFPs + 14) torch.Tensor
+        p_mask: probability a given sample is masked (either type)
+        numFPs: number of feature points (e.g. 10)
+    
+    Returns:
+        state_input_masked: same shape, with some FP positions zeroed.
+    """
+    B = state_input_tensor.shape[0]
+    state_out = state_input_tensor.clone()
+
+    for i in range(B):
+        if np.random.rand() < p_mask:
+            # 50% chance: contiguous block, 50% chance: non-contiguous
+            if np.random.rand() < 0.5:
+                # CONTIGUOUS masking
+                k_hidden = np.random.randint(1, 5)  # [1,4]
+                start = np.random.randint(0, numFPs - k_hidden + 1)
+                end = start + k_hidden
+                for fp_idx in range(start, end):
+                    s = 3 * fp_idx
+                    e = 3 * (fp_idx + 1)
+                    state_out[i, s:e] = 0.0
+            else:
+                # NON-CONTIGUOUS masking
+                k_hidden = np.random.randint(1, 5)  # [1,4]
+                hidden_indices = np.random.choice(numFPs, size=k_hidden, replace=False)
+                for fp_idx in hidden_indices:
+                    s = 3 * fp_idx
+                    e = 3 * (fp_idx + 1)
+                    state_out[i, s:e] = 0.0
+
+    return state_out
+
+def mask_feature_points_batch_combined_2(state_input_tensor, p_mask=0.25, numFPs=10):
+    """
+    Combined masking: randomly contiguous OR non-contiguous.
+    """
+    B = state_input_tensor.shape[0]
+    state_out = state_input_tensor.clone()
+    fp_visible_mask = torch.ones(B, numFPs, dtype=torch.float32)
+
+    for i in range(B):
+        if np.random.rand() < p_mask:
+            if np.random.rand() < 0.5:
+                # contiguous
+                k_hidden = np.random.randint(1, 5)
+                start = np.random.randint(0, numFPs - k_hidden + 1)
+                end = start + k_hidden
+                hidden_indices = range(start, end)
+            else:
+                # non-contiguous
+                k_hidden = np.random.randint(1, 5)
+                hidden_indices = np.random.choice(numFPs, size=k_hidden, replace=False)
+
+            for fp_idx in hidden_indices:
+                s = 3 * fp_idx
+                e = 3 * (fp_idx + 1)
+                state_out[i, s:e] = 0.0
+                fp_visible_mask[i, fp_idx] = 0.0
+
+    return state_out, fp_visible_mask
+
+# def get_graph_data(state_input, length, numFPs):
+#     # state_input dim is [1,44]
+#     left_end_pos = state_input[:, 3 * numFPs: 3 * numFPs + 3]
+#     left_end_quat = state_input[:, 3 * numFPs + 3: 3 * numFPs + 7]
+#     right_end_pos = state_input[:, 3 * numFPs + 7: 3 * numFPs + 10]
+#     right_end_quat = state_input[:, 3 * numFPs + 10: 3 * numFPs + 14]
+#     fps_pos = state_input[:, 0: 3 * numFPs].reshape(numFPs, 3)
+
+#     #Coordinate Axis Origin Augmentation
+#     # Choose origin at FP1 (feature point index 0)
+#     origin = fps_pos[0:1, :]  # shape [1, 3]
+
+#      # Shift everything so origin is FP1
+#     fps_pos_rel       = fps_pos       - origin          # [numFPs, 3]
+#     left_end_pos_rel  = left_end_pos  - origin          # [1, 3]
+#     right_end_pos_rel = right_end_pos - origin          # [1, 3]
+
+#     # node_input dim is 7
+#     # [x,y,z,angle pos]
+#     # angle_pos is [0,0,0,0] for fps, and [q1, q2, q3, q4] for ends
+#     left_end_state = torch.concat((left_end_pos_rel, left_end_quat), dim=-1)
+#     right_end_state = torch.concat((right_end_pos_rel, right_end_quat), dim=-1)
+#     fps_state = torch.concat((fps_pos_rel, torch.zeros(numFPs, 4)), dim=-1)
+
+#     # left_end_state = torch.concat((left_end_pos, left_end_quat), dim=-1)
+#     # right_end_state = torch.concat((right_end_pos, right_end_quat), dim=-1)
+#     # fps_state = torch.concat((fps_pos, torch.zeros(numFPs, 4)), dim=-1)
+
+#     node_input = torch.concat((left_end_state, fps_state, right_end_state), dim=0)
+
+#     # dim = [num_fps + 2, 3]
+#     all_pos_xyz = node_input[:, :3]
+
+#     # edge_index depends on redius
+#     # edge_index = radius_graph(all_pos_xyz, r=length / 3, loop=False)
+#     edge_index = radius_graph(all_pos_xyz, r=length, loop=False)
+
+#     # edge feature input, relative distance
+#     edge_input = all_pos_xyz[edge_index[0]] - all_pos_xyz[edge_index[1]]
+
+#     # return the graph with features
+#     graph = pyg.data.Data(
+#         x=node_input,
+#         edge_index=edge_index,
+#         edge_attr=edge_input,
+#         all_pos_xyz=all_pos_xyz
+#     )
+
+#     return graph
+
+def get_graph_data(state_input, length, fp_visible_mask, numFPs):
     # state_input dim is [1,44]
     left_end_pos = state_input[:, 3 * numFPs: 3 * numFPs + 3]
     left_end_quat = state_input[:, 3 * numFPs + 3: 3 * numFPs + 7]
@@ -127,25 +313,30 @@ def get_graph_data(state_input, length, numFPs):
     right_end_quat = state_input[:, 3 * numFPs + 10: 3 * numFPs + 14]
     fps_pos = state_input[:, 0: 3 * numFPs].reshape(numFPs, 3)
 
-    # node_input dim is 7
-    # [x,y,z,angle pos]
-    # angle_pos is [0,0,0,0] for fps, and [q1, q2, q3, q4] for ends
-    left_end_state = torch.concat((left_end_pos, left_end_quat), dim=-1)
-    right_end_state = torch.concat((right_end_pos, right_end_quat), dim=-1)
-    fps_state = torch.concat((fps_pos, torch.zeros(numFPs, 4)), dim=-1)
+    origin = fps_pos[0:1, :]
+    fps_pos_rel       = fps_pos       - origin
+    left_end_pos_rel  = left_end_pos  - origin
+    right_end_pos_rel = right_end_pos - origin
 
-    node_input = torch.concat((left_end_state, fps_state, right_end_state), dim=0)
+    left_end_state = torch.concat((left_end_pos_rel, left_end_quat), dim=-1)
+    right_end_state = torch.concat((right_end_pos_rel, right_end_quat), dim=-1)
+    fps_state = torch.concat((fps_pos_rel, torch.zeros(numFPs, 4)), dim=-1)  # (numFPs,7)
 
-    # dim = [num_fps + 2, 3]
+    # Build mask channel: 1 for visible, 0 for hidden
+    # Ends are always visible → mask=1
+    mask_left = torch.ones(1, 1, dtype=torch.float32)
+    mask_fp   = fp_visible_mask.reshape(numFPs, 1).to(torch.float32)
+    mask_right= torch.ones(1, 1, dtype=torch.float32)
+
+    mask_channel = torch.cat([mask_left, mask_fp, mask_right], dim=0)  # (numFPs+2,1)
+
+    node_input = torch.concat((left_end_state, fps_state, right_end_state), dim=0)  # (numFPs+2,7)
+    node_input = torch.cat([node_input, mask_channel], dim=1)  # (numFPs+2, 8)  ← extra mask bit
+
     all_pos_xyz = node_input[:, :3]
-
-    # edge_index depends on redius
-    edge_index = radius_graph(all_pos_xyz, r=length / 3, loop=False)
-
-    # edge feature input, relative distance
+    edge_index = radius_graph(all_pos_xyz, r=length, loop=False)
     edge_input = all_pos_xyz[edge_index[0]] - all_pos_xyz[edge_index[1]]
 
-    # return the graph with features
     graph = pyg.data.Data(
         x=node_input,
         edge_index=edge_index,
@@ -156,10 +347,58 @@ def get_graph_data(state_input, length, numFPs):
     return graph
 
 
-def get_graph_batch(state_input_tensor, length_tensor, numFPs=10):
-    # get a list of graph
-    return [get_graph_data(state_input_tensor[i:i + 1, :], length_tensor[i], numFPs) for i in
-            range(state_input_tensor.shape[0])]
+# def get_graph_batch(state_input_tensor, length_tensor, numFPs=10):
+#     # get a list of graph
+#     return [get_graph_data(state_input_tensor[i:i + 1, :], length_tensor[i], numFPs) for i in
+#             range(state_input_tensor.shape[0])]
+
+# def get_graph_batch(state_input_tensor, length_tensor, numFPs=10):
+#     # Ensure length_tensor is 1D of shape (B,)
+#     if isinstance(length_tensor, torch.Tensor):
+#         length_tensor = length_tensor.view(-1)  # flatten: (B,*) -> (B,)
+
+#     graphs = []
+#     B = state_input_tensor.shape[0]
+
+#     for i in range(B):
+#         state_i = state_input_tensor[i:i+1, :]  # (1, feat_dim)
+
+#         # length_tensor[i] should now be scalar-like
+#         length_i = length_tensor[i]
+
+#         if isinstance(length_i, torch.Tensor):
+#             r_i = float(length_i.item()) / 3.0
+#         else:
+#             r_i = float(length_i) / 3.0
+
+#         graphs.append(get_graph_data(state_i, r_i, numFPs))
+
+#     return graphs
+
+def get_graph_batch(state_input_tensor, length_tensor, fp_visible_mask, numFPs=10):
+    # length_tensor: (B,)
+    # fp_visible_mask: (B, numFPs)
+    if isinstance(length_tensor, torch.Tensor):
+        length_tensor = length_tensor.view(-1)
+
+    graphs = []
+    B = state_input_tensor.shape[0]
+
+    for i in range(B):
+        state_i = state_input_tensor[i:i+1, :]
+        length_i = length_tensor[i]
+        mask_i = fp_visible_mask[i]          # (numFPs,)
+
+        if isinstance(length_i, torch.Tensor):
+            r_i = float(length_i.item()) / 3.0
+        else:
+            r_i = float(length_i) / 3.0
+
+        graphs.append(get_graph_data(state_i, r_i, mask_i, numFPs))
+
+    return graphs
+
+
 
 
 # ----------------------------------------------------------------------------------------------------------
@@ -222,7 +461,7 @@ class MySimulator(torch.nn.Module):
         super().__init__()
 
         self.args = args_GN
-        self.node_dim = 7
+        self.node_dim = 8 # 7
         self.edge_dim = 3
         self.hidden_dim = 256
         self.output_dim = 360  # size of J
@@ -382,14 +621,14 @@ class JacobianPredictor(object):
             offline_model = args.controller_offline_model
             # if rospy.get_param("learning/is_test"):
             if args.learning_is_test:
-                if os.path.exists(self.nnWeightDir + "/model_J_GNN.pth"):
-                    self.model_J.load_state_dict(torch.load(self.nnWeightDir + "/model_J_GNN.pth"))
+                if os.path.exists(self.nnWeightDir + "/model_J.pth"):
+                    self.model_J.load_state_dict(torch.load(self.nnWeightDir + "/model_J.pth"))
                     # print('Load previous model.')
                 else:
                     print('Warning: no model exists !')
             else:
-                if os.path.exists(self.nnWeightDir + offline_model + "/model_J_GNN.pth"):
-                    self.model_J.load_state_dict(torch.load(self.nnWeightDir + offline_model + "/model_J_GNN.pth"))
+                if os.path.exists(self.nnWeightDir + offline_model + "/model_J.pth"):
+                    self.model_J.load_state_dict(torch.load(self.nnWeightDir + offline_model + "/model_J.pth"))
                     # print('Load previous model.')
                 else:
                     print('Warning: no model exists !')
@@ -399,7 +638,7 @@ class JacobianPredictor(object):
 
     # ------------------------------------------------------
     def SaveModelWeights(self):
-        torch.save(self.model_J.state_dict(), self.nnWeightDir + "model_J_GNN_rot.pth")
+        torch.save(self.model_J.state_dict(), self.nnWeightDir + "model_J_GNN_v8.pth")
         # print("Save models to ", self.nnWeightDir)
 
     # ------------------------------------------------------
@@ -415,7 +654,7 @@ class JacobianPredictor(object):
         # else:
         #     self.LoadModelWeights()
 
-        log_file = "loss_GNN_v2_rot.txt"
+        log_file = "loss_GNN_v8_rot_coord_len_hid4.txt"
         with open(log_file, "w") as f:
             f.write("Epoch,Loss\n")
 
@@ -425,14 +664,26 @@ class JacobianPredictor(object):
             accumLoss = 0.0
             numBatch = 0
             for batch_idx, (length, state_input, fps_vel, ends_vel) in enumerate(self.trainDataLoader):
-                # data augmentation
-                if rotation_augmentation:
-                    state_input, fps_vel, ends_vel = dataRandomTransform(state_input, fps_vel, ends_vel)
-                # state_input = self.relativeStateRepresentationTorch(state_input)
+                # rotation + length augmentation + length normalization
+                # choose L0 = 1.0 (or your nominal rope length in meters)
+                L0 = 1.0
+                state_input, length_norm, fps_vel, ends_vel = dataRandomTransformWithLength(
+                    state_input, length, fps_vel, ends_vel,
+                    length_augment=True,   # set False if you only want rotation
+                    L0=L0
+                )
 
-                # construct graph
+                 # ---- NEW: randomly hide contiguous and non-contiguous FP blocks in some samples ----
+                state_input, fp_visible_mask = mask_feature_points_batch_combined_2(
+                    state_input,
+                    p_mask=0.25,
+                    numFPs=args.DLO_num_FPs
+                )
 
-                graph_lst = get_graph_batch(state_input, length, numFPs=args.DLO_num_FPs)
+                # construct graph using *physical* length for radius
+                # here we recover physical length: length_phys = length_norm * L0
+                length_phys = length_norm * L0
+                graph_lst = get_graph_batch(state_input, length_phys, fp_visible_mask, numFPs=args.DLO_num_FPs)
                 graph_batch = Batch.from_data_list(graph_lst)
 
                 graph_batch = graph_batch.to('cuda' if torch.cuda.is_available() else 'cpu')
@@ -499,7 +750,7 @@ class JacobianPredictor(object):
 
             # construct graph
 
-            graph_lst = get_graph_batch(state_input, length, numFPs=args.DLO_num_FPs)
+            graph_lst = get_graph_batch(state_input, length, 1, numFPs=args.DLO_num_FPs)
             graph_batch = Batch.from_data_list(graph_lst)
 
             graph_batch = graph_batch.to('cuda' if torch.cuda.is_available() else 'cpu')
@@ -769,7 +1020,7 @@ if __name__ == '__main__':
     trainer = JacobianPredictor()
     trainer.LoadDataForTraining(train_dataset)
 
-    trainer.Train(loadPreModel=False, n_epoch=50, rotation_augmentation=True)
+    trainer.Train(loadPreModel=False, n_epoch=50, rotation_augmentation=False)
 
 # # test data, test for DLO 0
 #  test_dataset = np.empty((0, I.state_dim)).astype("float32")

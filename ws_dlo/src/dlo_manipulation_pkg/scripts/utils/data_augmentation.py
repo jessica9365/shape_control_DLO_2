@@ -79,6 +79,86 @@ def dataRandomTransform(state_input, fps_vel=None, ends_vel=None):
     else:
         return state_input_l
 
+# --------------------------------------------------------------------------------
+def dataRandomTransformWithLength(state_input, length, fps_vel=None, ends_vel=None,
+                                  length_augment=True, L0=1.0):
+    """
+    rotation + (optional) length augmentation + length normalization
+
+    Inputs:
+        state_input: (B, 3*num_fps + 14) torch.Tensor or np.ndarray
+        length:      (B,) torch.Tensor or np.ndarray, physical DLO length [m]
+        fps_vel:     (B, 3*num_fps) or None
+        ends_vel:    (B, 12) or None
+        length_augment: whether to do length scaling
+        L0:         nominal length for normalization
+
+    Returns (torch.Tensors):
+        state_input_out: (B, ...)
+        length_norm:     (B,)   normalized length = (scaled_length / L0)
+        fps_vel_out:     (B, 3*num_fps)
+        ends_vel_out:    (B, 12)
+    """
+    # ---- 1. call existing rotation augmentation ----
+    state_input_rot, fps_vel_rot, ends_vel_rot = dataRandomTransform(
+        state_input, fps_vel, ends_vel
+    )   # returns torch.Tensors
+
+    # convert to numpy for simple broadcasting
+    state_np = state_input_rot.numpy()
+    fps_np   = fps_vel_rot.numpy()
+    ends_np  = ends_vel_rot.numpy()
+
+    if isinstance(length, torch.Tensor):
+        length_np = length.cpu().numpy()
+    else:
+        length_np = np.array(length, dtype='float32')
+
+    B = state_np.shape[0]
+
+    # ---- 2. optional length augmentation (scale geometry + velocities + length) ----
+    if length_augment:
+        # e.g. random scale in [0.8, 1.2]
+        scale = (0.8 + 0.4 * np.random.rand(B, 1).astype('float32'))  # (B,1)
+
+        # extract positions
+        fps_pos = state_np[:, 0:3*num_fps].reshape(B, num_fps, 3)
+        left_end_pos  = state_np[:, 3*num_fps:3*num_fps+3].reshape(B, 1, 3)
+        right_end_pos = state_np[:, 3*num_fps+7:3*num_fps+10].reshape(B, 1, 3)
+
+        # choose origin = FP1
+        origin = fps_pos[:, 0:1, :]                # (B,1,3)
+        fps_rel   = fps_pos - origin
+        left_rel  = left_end_pos - origin
+        right_rel = right_end_pos - origin
+
+        # scale geometry around FP1
+        fps_pos_scaled   = origin + scale[..., None] * fps_rel     # (B,num_fps,3)
+        left_end_scaled  = origin + scale[..., None] * left_rel    # (B,1,3)
+        right_end_scaled = origin + scale[..., None] * right_rel   # (B,1,3)
+
+        # write back into state_np
+        state_np[:, 0:3*num_fps]             = fps_pos_scaled.reshape(B, -1)
+        state_np[:, 3*num_fps:3*num_fps+3]   = left_end_scaled.reshape(B, -1)
+        state_np[:, 3*num_fps+7:3*num_fps+10]= right_end_scaled.reshape(B, -1)
+
+        # scale linear velocities (broadcast across feature dimension)
+        fps_np  = fps_np  * scale          # (B, 1) * (B, 3*num_fps) -> (B, 3*num_fps)
+        ends_np = ends_np * scale          # (B, 1) * (B, 12)        -> (B, 12)
+
+        # scale length
+        length_np = length_np * scale.squeeze(1)   # (B,)
+
+    # ---- 3. normalize length ----
+    length_norm_np = length_np / float(L0)
+
+    # ---- 4. convert back to torch ----
+    state_out = torch.tensor(state_np, dtype=torch.float32)
+    fps_out   = torch.tensor(fps_np,   dtype=torch.float32)
+    ends_out  = torch.tensor(ends_np,  dtype=torch.float32)
+    length_norm = torch.tensor(length_norm_np, dtype=torch.float32)
+
+    return state_out, length_norm, fps_out, ends_out
 
 
 # # --------------------------------------------------------------------------------

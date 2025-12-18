@@ -1,0 +1,55 @@
+nohup: ignoring input
+Directory
+/home/jessica/shape_control_DLO_2/ws_dlo/src/dlo_manipulation_pkg/models/rbfWeights/2D/
+/home/jessica/shape_control_DLO_2/results/sim/
+/home/jessica/shape_control_DLO_2/data/
+epoch:  0  , Loss/train:  0.040841927843243836
+epoch:  1  , Loss/train:  0.020151110753210497
+epoch:  2  , Loss/train:  0.015290619549291855
+epoch:  3  , Loss/train:  0.013484854342491389
+epoch:  4  , Loss/train:  0.012464779799482397
+epoch:  5  , Loss/train:  0.011651214680322675
+epoch:  6  , Loss/train:  0.011096620137420004
+epoch:  7  , Loss/train:  0.010593404762569997
+epoch:  8  , Loss/train:  0.010131879008190433
+epoch:  9  , Loss/train:  0.009954630286553934
+epoch:  10  , Loss/train:  0.009577819955910541
+epoch:  11  , Loss/train:  0.009315644463113169
+epoch:  12  , Loss/train:  0.009105086484467234
+epoch:  13  , Loss/train:  0.008878602998267645
+epoch:  14  , Loss/train:  0.008666323299563404
+epoch:  15  , Loss/train:  0.008537159477328774
+epoch:  16  , Loss/train:  0.008371247525221661
+epoch:  17  , Loss/train:  0.008209179410699017
+epoch:  18  , Loss/train:  0.008213208617964216
+epoch:  19  , Loss/train:  0.007965933106073152
+epoch:  20  , Loss/train:  0.007867768707959208
+epoch:  21  , Loss/train:  0.00772528126284774
+epoch:  22  , Loss/train:  0.007643112749196906
+epoch:  23  , Loss/train:  0.007530180926023643
+epoch:  24  , Loss/train:  0.0074706550676133365
+epoch:  25  , Loss/train:  0.0073857052288433195
+epoch:  26  , Loss/train:  0.007277848272234885
+epoch:  27  , Loss/train:  0.007148523821181723
+epoch:  28  , Loss/train:  0.007120202806815982
+epoch:  29  , Loss/train:  0.007059458630786998
+epoch:  30  , Loss/train:  0.007008657724942083
+epoch:  31  , Loss/train:  0.006928759814450529
+epoch:  32  , Loss/train:  0.00689306994627065
+epoch:  33  , Loss/train:  0.006831896630352113
+epoch:  34  , Loss/train:  0.006827072569552357
+epoch:  35  , Loss/train:  0.0067185708254611474
+epoch:  36  , Loss/train:  0.006661530865082291
+epoch:  37  , Loss/train:  0.006598926709045464
+epoch:  38  , Loss/train:  0.006554503538169221
+epoch:  39  , Loss/train:  0.006549866224176435
+epoch:  40  , Loss/train:  0.006476592626233996
+epoch:  41  , Loss/train:  0.0065157196284937
+epoch:  42  , Loss/train:  0.006398216528105123
+epoch:  43  , Loss/train:  0.006376681093777865
+epoch:  44  , Loss/train:  0.00630717851526376
+epoch:  45  , Loss/train:  0.0063069681537700996
+epoch:  46  , Loss/train:  0.006218115565057264
+epoch:  47  , Loss/train:  0.006231680430763804
+epoch:  48  , Loss/train:  0.006217933757586091
+epoch:  49  , Loss/train:  0.0062290159429409615

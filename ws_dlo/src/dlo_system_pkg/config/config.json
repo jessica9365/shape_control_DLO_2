@@ -10,8 +10,8 @@
   "controller_enable_end_rotation": true,
   "controller_enable_left_arm": true,
   "controller_enable_right_arm": true,
-  "controller_control_law": "ours",
-  "controller_offline_model": "10_6",
+  "controller_control_law": "ours_v8",
+  "controller_offline_model": "gnn_v8",
   "controller_online_learning_learning_rate": 0.8,
   "controller_online_learning_weight_ratio": 10
 }
