@@ -87,5 +87,5 @@ def evaluateControlResults(names, num_case=100, delta_t=0.1):
 # -------------------------------------------------------------------------------------------------------------------------------------------------
 if __name__ == '__main__':
 
-    methods = ['ours_v8']
+    methods = ['ours_case1_v2']
     evaluateControlResults(methods)

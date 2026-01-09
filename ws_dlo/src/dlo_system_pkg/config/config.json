@@ -10,8 +10,11 @@
   "controller_enable_end_rotation": true,
   "controller_enable_left_arm": true,
   "controller_enable_right_arm": true,
-  "controller_control_law": "ours_v8",
-  "controller_offline_model": "gnn_v8",
+  "controller_control_law": "ours_case1_v2",
+  "controller_offline_model": "gnn_case1_v2",
   "controller_online_learning_learning_rate": 0.8,
-  "controller_online_learning_weight_ratio": 10
+  "controller_online_learning_weight_ratio": 10,
+  "weight_folder": "gnn_case1_v2",
+  "loss_log_folder": "loss_logs_case1",
+  "loss_log_filename": "loss_GNN_case1_v2.txt"
 }

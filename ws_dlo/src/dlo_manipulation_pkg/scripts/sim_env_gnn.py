@@ -18,13 +18,11 @@ from mlagents_envs.side_channel.environment_parameters_channel import Environmen
 import gymnasium as gym
 # import gym
 from gym_unity.envs import UnityToGymWrapper
+
 from utils.state_index import I
 from geometry_msgs.msg import Vector3
 
-# control_method = rospy.get_param("controller/control_law")
-# if control_method == 'ours_v1':
-#     from controller_ours_v1 import Controller
-from controller_ours_v8 import Controller
+from controller_ours_case1_v2 import Controller
 
 import torch
 
