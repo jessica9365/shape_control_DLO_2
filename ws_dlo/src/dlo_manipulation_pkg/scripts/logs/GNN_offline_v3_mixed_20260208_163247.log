@@ -1,0 +1,58 @@
+=== Running: GNN_offline_v3_mixed.py at 20260208_163247 ===
+Directory
+/home/jessica/shape_control_DLO_2/ws_dlo/src/dlo_manipulation_pkg/models/gnnWeights/2D_mixed/
+/home/jessica/shape_control_DLO_2/results/sim/
+/home/jessica/shape_control_DLO_2/data/
+epoch:  0  , Loss/train:  0.06408702358524047
+epoch:  1  , Loss/train:  0.056007814031642386
+epoch:  2  , Loss/train:  0.05546755622476657
+epoch:  3  , Loss/train:  0.05526626539398739
+epoch:  4  , Loss/train:  0.055151227702781844
+epoch:  5  , Loss/train:  0.05510020460178857
+epoch:  6  , Loss/train:  0.05490612846686006
+epoch:  7  , Loss/train:  0.054596080208447445
+epoch:  8  , Loss/train:  0.05431513800454547
+epoch:  9  , Loss/train:  0.05374084992894232
+epoch:  10  , Loss/train:  0.05321224759827291
+epoch:  11  , Loss/train:  0.0528651594218097
+epoch:  12  , Loss/train:  0.05243041806383682
+epoch:  13  , Loss/train:  0.051951914985995815
+epoch:  14  , Loss/train:  0.051421289052218516
+epoch:  15  , Loss/train:  0.050974128612958546
+epoch:  16  , Loss/train:  0.05069937090725024
+epoch:  17  , Loss/train:  0.05034695959675795
+epoch:  18  , Loss/train:  0.050062146232421716
+epoch:  19  , Loss/train:  0.04996791426370393
+epoch:  20  , Loss/train:  0.04963051541638908
+epoch:  21  , Loss/train:  0.04947648476610687
+epoch:  22  , Loss/train:  0.04938536075783818
+epoch:  23  , Loss/train:  0.049256629554797086
+epoch:  24  , Loss/train:  0.04905769176511114
+epoch:  25  , Loss/train:  0.0490002473160974
+epoch:  26  , Loss/train:  0.04872032587748092
+epoch:  27  , Loss/train:  0.04861639845552348
+epoch:  28  , Loss/train:  0.04857251554457491
+epoch:  29  , Loss/train:  0.04861494334442402
+epoch:  30  , Loss/train:  0.04842735996156105
+epoch:  31  , Loss/train:  0.048269529884526215
+epoch:  32  , Loss/train:  0.048025627840937835
+epoch:  33  , Loss/train:  0.048086486554253835
+epoch:  34  , Loss/train:  0.04800000227987766
+epoch:  35  , Loss/train:  0.047917963190278266
+epoch:  36  , Loss/train:  0.04784457424460952
+epoch:  37  , Loss/train:  0.04780366832116392
+epoch:  38  , Loss/train:  0.04782980247569491
+epoch:  39  , Loss/train:  0.04769135457175627
+epoch:  40  , Loss/train:  0.047546292816016716
+epoch:  41  , Loss/train:  0.04760586483868709
+epoch:  42  , Loss/train:  0.0474295962586014
+epoch:  43  , Loss/train:  0.04745126075184803
+epoch:  44  , Loss/train:  0.04725146499365123
+epoch:  45  , Loss/train:  0.04737393273267029
+epoch:  46  , Loss/train:  0.04714210899765176
+epoch:  47  , Loss/train:  0.047352921726035155
+epoch:  48  , Loss/train:  0.047227939888676095
+epoch:  49  , Loss/train:  0.047020323717517895
+Model saved: /home/jessica/shape_control_DLO_2/ws_dlo/src/dlo_manipulation_pkg/models/gnnWeights/2D_mixed/gnn_v3/model_J_v3.pth
+=== Exit code: 0 for GNN_offline_v3_mixed.py ===
+

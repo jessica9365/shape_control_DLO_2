@@ -1,0 +1,50 @@
+=== Running: GNN_offline_v2_mask_variable.py at 20260208_063946 ===
+Epoch 000 loss 0.041948
+Epoch 001 loss 0.025794
+Epoch 002 loss 0.015919
+Epoch 003 loss 0.012927
+Epoch 004 loss 0.011602
+Epoch 005 loss 0.010692
+Epoch 006 loss 0.010106
+Epoch 007 loss 0.009620
+Epoch 008 loss 0.009251
+Epoch 009 loss 0.008979
+Epoch 010 loss 0.008672
+Epoch 011 loss 0.008420
+Epoch 012 loss 0.008257
+Epoch 013 loss 0.008054
+Epoch 014 loss 0.007901
+Epoch 015 loss 0.007758
+Epoch 016 loss 0.007678
+Epoch 017 loss 0.007530
+Epoch 018 loss 0.007429
+Epoch 019 loss 0.007400
+Epoch 020 loss 0.007219
+Epoch 021 loss 0.007182
+Epoch 022 loss 0.007026
+Epoch 023 loss 0.007022
+Epoch 024 loss 0.006877
+Epoch 025 loss 0.006902
+Epoch 026 loss 0.006813
+Epoch 027 loss 0.006793
+Epoch 028 loss 0.006647
+Epoch 029 loss 0.006634
+Epoch 030 loss 0.006585
+Traceback (most recent call last):
+  File "GNN_offline_v2_mask_variable.py", line 391, in <module>
+    trainer.train()
+  File "GNN_offline_v2_mask_variable.py", line 297, in train
+    self.optimizer.step()
+  File "/home/jessica/dlo_env/lib/python3.8/site-packages/torch/optim/optimizer.py", line 484, in wrapper
+    out = func(*args, **kwargs)
+  File "/home/jessica/dlo_env/lib/python3.8/site-packages/torch/optim/optimizer.py", line 89, in _use_grad
+    ret = func(self, *args, **kwargs)
+  File "/home/jessica/dlo_env/lib/python3.8/site-packages/torch/optim/adam.py", line 226, in step
+    adam(
+  File "/home/jessica/dlo_env/lib/python3.8/site-packages/torch/optim/optimizer.py", line 161, in maybe_fallback
+    return func(*args, **kwargs)
+  File "/home/jessica/dlo_env/lib/python3.8/site-packages/torch/optim/adam.py", line 766, in adam
+    func(
+  File "/home/jessica/dlo_env/lib/python3.8/site-packages/torch/optim/adam.py", line 379, in _single_tensor_adam
+    exp_avg.lerp_(grad, 1 - beta1)
+KeyboardInterrupt
