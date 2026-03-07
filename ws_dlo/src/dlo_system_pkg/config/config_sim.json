@@ -1,0 +1,20 @@
+{
+  "project_dir": "/home/jessica/shape_control_DLO_2/",
+  "env_sim_or_real": "sim",
+  "env_dimension": "2D",
+  "ros_rate_env_rate": 10,
+  "ros_rate_online_update_rate": 50,
+  "DLO_num_FPs": 10,
+  "learning_is_test": false,
+  "controller_object_fps_idx": [1, 2, 3, 4, 5, 6, 7, 8],
+  "controller_enable_end_rotation": true,
+  "controller_enable_left_arm": true,
+  "controller_enable_right_arm": true,
+  "controller_control_law": "gnn_v4_c3",
+  "controller_offline_model": "gnn_v4",
+  "controller_online_learning_learning_rate": 0.8,
+  "controller_online_learning_weight_ratio": 10,
+  "weight_folder": "gnn_v4",
+  "loss_log_folder": "/home/jessica/shape_control_DLO_2/ws_dlo/src/dlo_manipulation_pkg/scripts/training_logs",
+  "loss_log_filename": "gnn_v4.txt"
+}
