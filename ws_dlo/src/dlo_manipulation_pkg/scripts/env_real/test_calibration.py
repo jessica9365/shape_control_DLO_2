@@ -13,7 +13,7 @@ CONFIG_PATH = "C:/Users/91990/Documents/GitHub/FYP_Object_Detection_Model/shape_
 # Load tf matrix
 with open(CONFIG_PATH) as f:
     cfg = json.load(f)
-tf = np.array(cfg["tf_img_rb2_2D_onearm"])
+tf = np.array(cfg["tf_img_rb1_2D_onearm"])
 
 clicked = []
 

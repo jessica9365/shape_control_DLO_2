@@ -2,7 +2,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 import torch
 from torch._C import dtype
-import rospy
+# import rospy
 from scipy.spatial.transform import Rotation as sciR
 
 try:
@@ -335,9 +335,9 @@ if __name__ == '__main__':
 
     # from my_plot import plot3dState
 
-    project_dir = rospy.get_param("project_dir")
-    env_dim = rospy.get_param("env/dimension")
-    num_fps = rospy.get_param("DLO/num_FPs")
+    project_dir = "C:/Users/91990/Documents/GitHub/FYP_Object_Detection_Model/shape_control_DLO_2"
+    env_dim = "2D"
+    num_fps = 10
 
     states_world = np.load(project_dir + "data/train_data/"+ env_dim + "/state.npy").astype("float32")
 

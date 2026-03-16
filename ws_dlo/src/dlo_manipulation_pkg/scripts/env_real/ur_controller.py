@@ -4,8 +4,9 @@ import rtde_control
 import dashboard_client
 import numpy as np
 import rtde_receive
-import print_utils
+import utils.print_utils as print_utils
 import threading
+import csv
 
 class URrobot(): # create class for ur robot
     def __init__(self, robot_ip):
@@ -17,6 +18,8 @@ class URrobot(): # create class for ur robot
         self.home_acc = 0.25
 
         self.is_online = False
+        self.logs = []
+        
 
         try:
             """ # not available for polyscope < 5.6
@@ -118,3 +121,14 @@ class URrobot(): # create class for ur robot
                     self.receive.disconnect()
         except Exception as e:
             print_utils.logerr(e)
+    
+    def save_logs(self, filename):
+        if not self.logs:
+            print_utils.logwarn("No logs to save")
+            return
+        keys = list(self.logs[0].keys())
+        with open(filename, "w", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=keys)
+            writer.writeheader()
+            writer.writerows(self.logs)
+        print_utils.loginfo(f"Saved logs to {filename}")

@@ -1,9 +1,9 @@
 # utils/state_index.py
 
-try:
-    import rospy
-except ImportError:
-    rospy = None
+# try:
+#     import rospy
+# except ImportError:
+#     rospy = None
 
 # If you want to still support ROS param when available:
 # num_fps = rospy.get_param("DLO/num_FPs") if rospy else 10

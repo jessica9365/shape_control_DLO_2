@@ -20,3 +20,6 @@ ws_dlo/src/dlo_manipulation_pkg/models_old/*
 ws_dlo/src/dlo_manipulation_pkg/models_test/*
 
 data/*
+env_dlo/env_2D_Data/StreamingAssets/desired_shape/2D/images/*
+env_dlo/env_2D_Data/StreamingAssets/desired_shape/2D/images/realsim_desired_positions_onearm_old.npy
+env_dlo/env_2D_Data/StreamingAssets/desired_shape/2D/images/realsim_desired_positions_onearm.npy

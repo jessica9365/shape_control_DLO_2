@@ -9,15 +9,55 @@ import csv
 import numpy as np
 import glob
 import re
-from detect_utils import FpDetector
+from utils.detect_utils import FpDetector
 import json
-import print_utils
+import utils.print_utils as print_utils
 
 def load_config(filename):
     with open(filename, 'r') as file:
         config = json.load(file)
     return config
 
+def interpolateMissingFP(missing_idx, keypoints_vector, last_keypoints, num_fp):
+    """
+    Estimate position of a missing FP using nearest visible neighbours.
+    Falls back to last known position if no neighbours are available.
+    """
+    # Find nearest visible neighbour to the LEFT
+    left_idx, left_pos = None, None
+    for i in range(missing_idx - 1, -1, -1):
+        if keypoints_vector[i] != (0, 0):
+            left_idx = i
+            left_pos = keypoints_vector[i]
+            break
+
+    # Find nearest visible neighbour to the RIGHT
+    right_idx, right_pos = None, None
+    for i in range(missing_idx + 1, num_fp):
+        if keypoints_vector[i] != (0, 0):
+            right_idx = i
+            right_pos = keypoints_vector[i]
+            break
+
+    # Both neighbours found → linear interpolation
+    if left_pos is not None and right_pos is not None:
+        # How far is missing_idx between left and right?
+        t = (missing_idx - left_idx) / (right_idx - left_idx)
+        x = left_pos[0] + t * (right_pos[0] - left_pos[0])
+        y = left_pos[1] + t * (right_pos[1] - left_pos[1])
+        return (x, y)
+
+    # Only left neighbour → extrapolate using last known velocity
+    elif left_pos is not None:
+        return last_keypoints[missing_idx]  # fallback to frozen
+
+    # Only right neighbour → fallback
+    elif right_pos is not None:
+        return last_keypoints[missing_idx]  # fallback to frozen
+
+    # No neighbours at all → frozen
+    else:
+        return last_keypoints[missing_idx]
 
 class dloDetector():
     def __init__(self, config_path):
@@ -94,15 +134,33 @@ class dloDetector():
                             break
         
         
+            # for key in match_final:
+            #     if match_final[key]!=(0,0): #find matched detection
+            #         keypoints_vector[key] = match_final[key]
+            #     else: #used previous fp pos to lable
+            #         miss_idx.append(key)
+            #         # # use last fp position
+            #         # keypoints_vector[key] = keypoints_matrix[-1][key]
+            #         # ── NEW: try linear interpolation from neighbours ──
+            #         interpolated = interpolateMissingFP(key, keypoints_vector, keypoints_matrix[-1], self.num_fp)
+            #         keypoints_vector[key] = interpolated
+
+            # ── REPLACE WITH THIS ────────────────────────────────────────────────────
+            # Pass 1: fill all visible (matched) FPs first
             for key in match_final:
-                if match_final[key]!=(0,0): #find matched detection
+                if match_final[key] != (0, 0):
                     keypoints_vector[key] = match_final[key]
-                else: #used previous fp pos to lable
+
+            # Pass 2: now that all visible neighbours are populated, interpolate missing FPs
+            for key in match_final:
+                if match_final[key] == (0, 0):
                     miss_idx.append(key)
-                    # use last fp position
-                    keypoints_vector[key] = keypoints_matrix[-1][key]
-        
+                    interpolated = interpolateMissingFP(key, keypoints_vector, keypoints_matrix[-1], self.num_fp)
+                    keypoints_vector[key] = interpolated
+
             print_utils.loginfo(f"cannot find matched for {miss_idx}")
+            
+
         
         
         # initialise keypoint indexes using the first frame in the video
@@ -135,45 +193,109 @@ class dloDetector():
         return img_label_fp, keypoints_vector_3D, keypoints_matrix, miss_idx
     
 
+def main():
+    """
+    Standalone RealSense test for dlo_detector.py.
+    Press 'q' to quit, 'r' to reset keypoints.
+    """
+    import pyrealsense2 as rs
+
+    config_path = r"C:\Users\91990\Documents\GitHub\FYP_Object_Detection_Model\shape_control_DLO_2\ws_dlo\src\dlo_system_pkg\config\config_tf.json"
+
+    print_utils.loginfo("Initialising dloDetector...")
+    dlo = dloDetector(config_path)
+
+    # Configure RealSense pipeline
+    pipeline = rs.pipeline()
+    rs_config = rs.config()
+    rs_config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
+    pipeline_started = False
+
+    keypoints_matrix = []
+    frames_to_skip = 10
+    first_instance = True  # ← guard flag
+
+    try:
+        print_utils.loginfo("Starting RealSense camera...")
+        pipeline.start(rs_config)
+        pipeline_started = True
+        print_utils.loginfo("Camera started. Press 'q' to quit, 'r' to reset.")
+
+        while True:
+            frame = pipeline.wait_for_frames()
+            color_frame = frame.get_color_frame()
+            if not color_frame:
+                print_utils.logwarn("No color frame received, skipping...")
+                continue
+
+            img = np.asanyarray(color_frame.get_data())
+
+            # Skip first few frames to let auto-exposure settle
+            if frames_to_skip > 0:
+                frames_to_skip -= 1
+                cv2.putText(img, "Loading... please wait.", (10, 30),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 1)
+                cv2.imshow("dlo_detector test", img)
+                cv2.waitKey(1)
+                continue
+
+            # Run detection
+            img_out, keypoints_3d, keypoints_matrix, miss_idx = dlo.detectFeatures(
+                img, keypoints_matrix
+            )
+
+            # ── First instance guard ──────────────────────────────────────────
+            if first_instance:
+                if not any((x, y) != (0.0, 0.0) for x, y, z in keypoints_3d):
+                    print_utils.logwarn("No keypoints detected on first frame, retrying...")
+                    keypoints_matrix = []  # discard bad initialisation row
+                else:
+                    print_utils.loginfo(f"Keypoints initialised successfully.")
+                    first_instance = False
+                cv2.imshow("dlo_detector test", img_out)
+                cv2.waitKey(1)
+                continue  # don't proceed to tracking until initialisation is clean
+            # ─────────────────────────────────────────────────────────────────
+
+            # Show detection region box
+            img_out = dlo.showDetectionRegion(img_out)
+
+            # Overlay FP index labels
+            for i, (x, y, z) in enumerate(keypoints_3d):
+                if (x, y) != (0.0, 0.0):
+                    cv2.putText(img_out, str(i), (int(x), int(y)),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 0), 1)
+
+            # Status text
+            detected = sum(1 for x, y, z in keypoints_3d if (x, y) != (0.0, 0.0))
+            cv2.putText(img_out, f"FPs: {detected}/{dlo.num_fp}", (10, 25),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+            if miss_idx:
+                cv2.putText(img_out, f"Missing: {miss_idx}", (10, 50),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
+
+            cv2.imshow("dlo_detector test", img_out)
+
+            key = cv2.waitKey(30) & 0xFF
+            if key == ord('q'):
+                print_utils.loginfo("Quit.")
+                break
+            elif key == ord('r'):
+                print_utils.loginfo("Resetting keypoints...")
+                keypoints_matrix = []
+                first_instance = True  # ← also reset the guard on manual reset
+
+    except Exception as e:
+        import sys
+        tb = sys.exc_info()[2]
+        print_utils.logerr(f"LINE {tb.tb_lineno}: {e}")
+
+    finally:
+        if pipeline_started:
+            pipeline.stop()
+        cv2.destroyAllWindows()
+        print_utils.loginfo("Test complete.")
+
 
 if __name__ == "__main__":
-    import sys
-    import numpy as np
-    import pyrealsense2 as rs
-    
-    config_path = r"C:\Users\91990\Documents\GitHub\FYP_Object_Detection_Model\shape_control_DLO_2\ws_dlo\src\dlo_system_pkg\config\config_tf.json"
-    
-    detector = dloDetector(config_path)
-    print("DLO Detector + RealSense ready! Press 'q' to quit.")
-    
-    # RealSense pipeline
-    pipeline = rs.pipeline()
-    config = rs.config()
-    config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
-    # config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)  # Uncomment for depth
-    
-    profile = pipeline.start(config)
-    
-    try:
-        while True:
-            frameset = pipeline.wait_for_frames()
-            color_frame = frameset.get_color_frame()
-            if color_frame:
-                img = np.asanyarray(color_frame.get_data())
-                
-                # DLO detection
-                # out = detector.showDetectionRegion(img)
-                # out2, keypoints, _, _ = detector.detectFeatures(img)  # Uncomment for keypoints
-                keypoints_matrix = []
-                out, keypoints_3d, keypoints_matrix, misses = detector.detectFeatures(img, keypoints_matrix)
-                cv2.imshow("RealSense DLO Detection", out)
-                
-                key = cv2.waitKey(1) & 0xFF
-                if key == ord('q'):
-                    break
-    finally:
-        pipeline.stop()
-        cv2.destroyAllWindows()
-        print("Stopped.")
-
-
+    main()
