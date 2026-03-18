@@ -22,7 +22,7 @@ import cv2
 import pandas as pd
 
 control_method = rospy.get_param("controller/control_law")
-from controller_ours_v4 import Controller
+from controller_ours_v1 import Controller
 import torch
 
 
@@ -162,6 +162,7 @@ class Environment(object):
             target_pos = state[I.desired_pos_idx].reshape(10, 3).copy()
 
             self.control_input = self.controller.generateControlInput(state, observed_state).copy()
+            # self.control_input = self.controller.generateControlInput(observed_state).copy()
             self.control_input[[3, 4, 5, 9, 10, 11]] *= 2 * np.pi
 
             state, reward, done, _ = self.env.step(self.control_input)
@@ -175,7 +176,7 @@ class Environment(object):
             bbox_coords = []
 
             # missing_idx, bbox_coords = create_miss_rectangle(target_pos[:, :2], fp_pos[:, :2], width=0.07, height=0.07)
-            missing_idx = [0, 2, 4, 6]
+            # missing_idx = [0, 2, 4, 6]
             print("missing_idx", missing_idx)
 
             all_fp_pos_interp = interpolate_missing_points(

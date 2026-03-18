@@ -857,7 +857,7 @@ import argparse
 parser = argparse.ArgumentParser(description="DLO Parser")
 
 
-def load_args_from_file(filepath='/home/jessica/shape_control_DLO_2/ws_dlo/src/dlo_system_pkg/config/config.json'):
+def load_args_from_file(filepath='/home/jessica/shape_control_DLO_2/ws_dlo/src/dlo_system_pkg/config/config_sim.json'):
     with open(filepath, 'r') as file:
         args_dict = json.load(file)
     # Convert dictionary back to Namespace

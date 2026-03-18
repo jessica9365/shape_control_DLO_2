@@ -87,14 +87,7 @@ def evaluateControlResults(names, num_case=100, delta_t=0.1):
 # -------------------------------------------------------------------------------------------------------------------------------------------------
 if __name__ == '__main__':
 
-    methods = ['gnn_v1_c1', 'gnn_v1_c2', 'gnn_v1_c3', 
-               'gnn_v2_mask_1_c1','gnn_v2_mask_variable_c1','gnn_v2_mixed_c1',
-               'gnn_v2_mask_1_c2','gnn_v2_mask_variable_c2','gnn_v2_mixed_c2', 
-               'gnn_v2_mask_1_c3','gnn_v2_mask_variable_c3','gnn_v2_mixed_c3',
-               'gnn_v3_mask_1_c1','gnn_v3_mask_variable_c1','gnn_v3_mixed_c1',
-               'gnn_v3_mask_1_c2','gnn_v3_mask_variable_c2','gnn_v3_mixed_c2', 
-               'gnn_v3_mask_1_c3','gnn_v3_mask_variable_c3','gnn_v3_mixed_c3',
-               'gnn_v4_c1', 'gnn_v4_c2', 'gnn_v4_c3'
+    methods = ['gnn_v1_c1', 'rbf_c1_error_analysis', 'gnn_v1_c2', 'rbf_c2_error_analysis', 'gnn_v1_c3', 'rbf_c3_error_analysis'
 
     ]
     evaluateControlResults(methods)

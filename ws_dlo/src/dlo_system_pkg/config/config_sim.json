@@ -10,11 +10,11 @@
   "controller_enable_end_rotation": true,
   "controller_enable_left_arm": true,
   "controller_enable_right_arm": true,
-  "controller_control_law": "gnn_v4_c3",
-  "controller_offline_model": "gnn_v4",
+  "controller_control_law": "gnn_v1_c1_error_analysis",
+  "controller_offline_model": "gnn_v1",
   "controller_online_learning_learning_rate": 0.8,
   "controller_online_learning_weight_ratio": 10,
-  "weight_folder": "gnn_v4",
+  "weight_folder": "gnn_v1",
   "loss_log_folder": "/home/jessica/shape_control_DLO_2/ws_dlo/src/dlo_manipulation_pkg/scripts/training_logs",
-  "loss_log_filename": "gnn_v4.txt"
+  "loss_log_filename": "gnn_v1.txt"
 }

@@ -13,7 +13,7 @@ from scipy.spatial.transform import Rotation as sciR
 
 import copy
 
-from GNN_offline_v2 import JacobianPredictor
+from GNN_offline_v1 import JacobianPredictor
 from utils.state_index import I
 import torch
 

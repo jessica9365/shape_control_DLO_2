@@ -6,8 +6,8 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 
-BASE_LOG_DIR = r"<SET_THIS_TO_YOUR_SIM_LOG_DIR>"
-OUT_DIR = os.path.join(BASE_LOG_DIR, "analysis")
+BASE_LOG_DIR = r"/home/jessica/shape_control_DLO_2/results/sim/logs/gnn_v1_c3_error_analysis/2D"
+OUT_DIR = r"/home/jessica/shape_control_DLO_2/analysis/gnn_v1/c3"
 THRESHOLD_M = 0.05
 DWELL_S = 1.0
 USE_PREFIXES = ["gt", "obs"]
